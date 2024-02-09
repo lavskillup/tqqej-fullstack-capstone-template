@@ -2,29 +2,20 @@ require('dotenv').config();
 const MongoClient = require('mongodb').MongoClient;
 const fs = require('fs');
 
-const username = encodeURIComponent(process.env.MONGO_USER);
-const password = encodeURIComponent(process.env.MONGO_PASS);
-const authSource = 'admin';
+// MongoDB connection URL with authentication options
+let url = `${process.env.MONGO_URL}`;
+let filename = `${__dirname}/gifts.json`;
+const dbName = 'giftdb';
+const collectionName = 'gifts';
 
-// MongoDB connection URL
-const url = process.env.MONGO_URL;
+console.log("buhaa haa haa"+__dirname);
 
-const dbName = 'productdb';
-const collectionName = 'products';
-
-// notice you have to load the array of products into the data object
-const data = JSON.parse(fs.readFileSync('products.json', 'utf8')).docs;
+// notice you have to load the array of gifts into the data object
+const data = JSON.parse(fs.readFileSync(filename, 'utf8')).docs;
 
 // connect to database and insert data into the collection
 async function loadData() {
-    const client = new MongoClient(url, {
-        auth: {
-            username: username,
-            password: password
-        },
-        authSource: authSource,
-        useUnifiedTopology: true
-    });
+    const client = new MongoClient(url);
 
     try {
         // Connect to the MongoDB client
@@ -34,12 +25,18 @@ async function loadData() {
         // database will be created if it does not exist
         const db = client.db(dbName);
 
-        // collect will be created if it does not exist
+        // collection will be created if it does not exist
         const collection = db.collection(collectionName);
+        let cursor = await collection.find({});
+        let documents = await cursor.toArray();
 
-        // Insert data into the collection
-        const insertResult = await collection.insertMany(data);
-        console.log('Inserted documents:', insertResult.insertedCount);
+        if(documents.length == 0) {
+            // Insert data into the collection
+            const insertResult = await collection.insertMany(data);
+            console.log('Inserted documents:', insertResult.insertedCount);
+        } else {
+            console.log("Gifts already exists in DB")
+        }
     } catch (err) {
         console.error(err);
     } finally {
@@ -48,5 +45,8 @@ async function loadData() {
     }
 }
 
-// call the function to load the data
 loadData();
+
+module.exports = {
+    loadData,
+  };
